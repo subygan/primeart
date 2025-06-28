@@ -125,7 +125,7 @@ function trialComposite(a: bigint, d: bigint, n: bigint, s: bigint): boolean {
  */
 export async function findPrimeByPerturbation(
   initialNumberStr: string,
-  onProgress: (progress: { attempts: number; currentCandidate: string }) => void
+  onProgress: (progress: { attempts: number; currentCandidate: string; charIndex?: number }) => void
 ): Promise<string> {
   let attempts = 0;
 
@@ -133,6 +133,7 @@ export async function findPrimeByPerturbation(
   const originalCandidate = BigInt(initialNumberStr);
   if (isPrime(originalCandidate)) {
     console.log(`Original number is prime!`);
+    onProgress({ attempts: 1, currentCandidate: initialNumberStr });
     return initialNumberStr;
   }
 
@@ -142,8 +143,10 @@ export async function findPrimeByPerturbation(
     // Perturb 1-2 digits from the original string
     const numDigitsToChange = 1 + Math.floor(Math.random() * 2);
     let newNumStrArr = initialNumberStr.split('');
+    let lastChangedIndex = -1;
     for (let i = 0; i < numDigitsToChange; i++) {
       const randomIndex = Math.floor(Math.random() * newNumStrArr.length);
+      lastChangedIndex = randomIndex;
       // Ensure the first digit is not '0'
       const newDigit = (randomIndex === 0)
         ? (Math.floor(Math.random() * 9) + 1).toString()
@@ -155,11 +158,13 @@ export async function findPrimeByPerturbation(
 
     if (isPrime(candidate)) {
       console.log(`Found prime after ${attempts} attempts.`);
+      onProgress({ attempts, currentCandidate: numStr, charIndex: lastChangedIndex });
       return numStr;
     }
 
-    if (attempts % 100 === 0) {
-      onProgress({ attempts, currentCandidate: numStr });
+    // Report progress more frequently for a "real-time" feel.
+    if (attempts % 20 === 0) { // Update every 20 attempts
+      onProgress({ attempts, currentCandidate: numStr, charIndex: lastChangedIndex });
       await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
     }
   }

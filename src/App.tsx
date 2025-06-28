@@ -10,7 +10,7 @@ function App() {
 
   const [primeNumber, setPrimeNumber] = useState<string | null>(null);
   const [primeSearchStatus, setPrimeSearchStatus] = useState<string>('Idle');
-  const [searchProgress, setSearchProgress] = useState<{ attempts: number; currentCandidate: string } | undefined>(undefined);
+  const [searchProgress, setSearchProgress] = useState<{ attempts: number; currentCandidate: string; charIndex?: number } | undefined>(undefined);
   const [primeAsciiArt, setPrimeAsciiArt] = useState<string[] | undefined>(undefined);
   const [currentCandidateAscii, setCurrentCandidateAscii] = useState<string[] | undefined>(undefined);
   const [error, setError] = useState<string>('');
@@ -124,6 +124,9 @@ function App() {
                 <div className="progress-details">
                   <p>Attempts: {searchProgress.attempts.toLocaleString()}</p>
                   <p>Candidate: <span>{searchProgress.currentCandidate.substring(0, 30)}...</span></p>
+                  {searchProgress.charIndex !== undefined && (
+                    <p>Testing char at index: {searchProgress.charIndex}</p>
+                  )}
                 </div>
               )}
             </div>
