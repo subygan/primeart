@@ -1,59 +1,72 @@
-import React from 'react';
+import React, { useState } from 'react';
+
+// Make sure you have a CSS file for component-specific styles
+// or add the new classes to your main App.css
+import './PrimeDisplay.css'; 
 
 interface PrimeDisplayProps {
   primeNumber: string | null;
-  primeSearchStatus: string; // e.g., "Idle", "Searching...", "Found", "Error"
-  searchProgress?: { attempts: number; currentCandidate: string };
-  error?: string | null;
-  primeAsciiArt?: string[]; // The prime number formatted as ASCII art
+  primeAsciiArt?: string[];
+  isProcessing: boolean;
+  error: string;
 }
 
-const PrimeDisplay: React.FC<PrimeDisplayProps> = ({
-  primeNumber,
-  primeSearchStatus,
-  searchProgress,
-  error, // Error is now passed from App.tsx only when relevant
-  primeAsciiArt,
-}) => {
-  if (primeSearchStatus === 'Idle' && !primeNumber && !error) {
-    return null;
+const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error }: PrimeDisplayProps) => {
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!primeNumber) return;
+
+    try {
+      await navigator.clipboard.writeText(primeNumber);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      // Optionally show an error message to the user
+    }
+  };
+
+  // 1. Loading State
+  if (isProcessing && !primeNumber && !error) {
+    return <div className="skeleton-loader" style={{ minHeight: '300px' }} />;
   }
 
+  // 2. Error State
+  if (error) {
+    return (
+      <div className="display-message error">
+        <p><strong>Generation Failed</strong></p>
+        <p>The process could not be completed. Please try a different image.</p>
+      </div>
+    );
+  }
+
+  // 3. Idle / Initial State
+  if (!primeAsciiArt || !primeNumber) {
+    return (
+      <div className="display-message">
+        <p>The prime number art will be displayed here once an image is processed.</p>
+      </div>
+    );
+  }
+
+  // 4. Success State
   return (
-    <div className="component-container">
-      <h3>Prime Number Search</h3>
-      <p className="status-text">Status: {primeSearchStatus}</p>
-
-      {primeSearchStatus === 'Searching...' && searchProgress && (
-        <div className="progress-details">
-          <p>Attempts: {searchProgress.attempts}</p>
-          <p className="progress-candidate">
-            Trying: {searchProgress.currentCandidate}
-          </p>
+    <div className="prime-display-container">
+      <pre className="ascii-art-output">{primeAsciiArt.join('\n')}</pre>
+      
+      <div className="prime-number-section">
+        <div className="prime-number-header">
+          <h5>The Resulting Prime Number</h5>
+          <button onClick={handleCopy} className="copy-button" disabled={isCopied}>
+            {isCopied ? 'Copied!' : 'Copy'}
+          </button>
         </div>
-      )}
-
-      {error && ( // Error is already styled by .error-message in App.tsx if passed globally
-        <p className="error-message" style={{marginTop: '10px'}}>Specific Search Error: {error}</p>
-      )}
-
-      {primeNumber && primeSearchStatus === 'Found' && (
-        <div>
-          <h4 style={{ color: '#28a745', marginTop: '15px' }}>Prime Found!</h4>
-          {primeAsciiArt && primeAsciiArt.length > 0 ? (
-            <div>
-              <p style={{marginTop: '5px', marginBottom: '5px'}}>Prime represented as ASCII Art:</p>
-              <pre className="prime-output-ascii">
-                {primeAsciiArt.join('\n')}
-              </pre>
-            </div>
-          ) : (
-            <p className="prime-number-text">
-              {primeNumber}
-            </p>
-          )}
+        <div className="prime-number-value">
+          <code>{primeNumber}</code>
         </div>
-      )}
+      </div>
     </div>
   );
 };

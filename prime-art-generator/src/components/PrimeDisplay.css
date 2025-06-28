@@ -1,0 +1,97 @@
+/* Styles for PrimeDisplay Component */
+
+.prime-display-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ascii-art-output {
+  background-color: var(--bg-dark);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  max-height: 400px; /* Limit height to prevent huge cards */
+  overflow: auto; /* Allow scrolling for tall images */
+}
+
+/* For placeholder and error messages */
+.display-message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 200px;
+  color: var(--text-secondary);
+  background-color: var(--bg-dark);
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.display-message.error {
+    color: var(--text-error);
+    border-color: var(--text-error);
+    background-color: rgba(248, 113, 113, 0.05);
+}
+
+.display-message p {
+    margin: 0.25rem 0;
+}
+
+/* Section for displaying the full prime number */
+.prime-number-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.prime-number-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.prime-number-header h5 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.copy-button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.copy-button:hover {
+  background-color: var(--accent-hover);
+}
+
+.copy-button:disabled {
+  background-color: #059669; /* A success green */
+  cursor: default;
+}
+
+.prime-number-value {
+  background-color: var(--bg-dark);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  max-height: 150px;
+  overflow-y: auto;
+  word-break: break-all; /* Break the long string */
+}
+
+.prime-number-value code {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
