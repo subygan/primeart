@@ -40,58 +40,31 @@
     margin: 0.25rem 0;
 }
 
-/* Section for displaying the full prime number */
-.prime-number-section {
-  border-top: 1px solid var(--border-color);
-  padding-top: 1rem;
+/* New styles for live primality check */
+.live-view-container {
+  position: relative;
 }
 
-.prime-number-header {
+.status-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(26, 26, 33, 0.8); /* Semi-transparent version of --bg-panel */
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 0.75rem;
+  border-radius: 6px; /* Match the ascii-art-output border-radius */
+  pointer-events: none; /* Allow clicks to pass through if needed */
 }
 
-.prime-number-header h5 {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--text-secondary);
-}
-
-.copy-button {
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.copy-button:hover {
-  background-color: var(--accent-hover);
-}
-
-.copy-button:disabled {
-  background-color: #059669; /* A success green */
-  cursor: default;
-}
-
-.prime-number-value {
-  background-color: var(--bg-dark);
-  padding: 1rem;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  max-height: 150px;
-  overflow-y: auto;
-  word-break: break-all; /* Break the long string */
-}
-
-.prime-number-value code {
-  font-size: 0.9rem;
+.status-overlay p {
   color: var(--text-main);
-  line-height: 1.5;
+  font-size: 1.1rem;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }

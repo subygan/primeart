@@ -10,6 +10,10 @@ const SEVEN = BigInt(7);
 const EIGHT = BigInt(8);
 const NINE = BigInt(9);
 
+// Cache for primality test results
+const primeCache = new Map<bigint, boolean>();
+let primalityTestTries = 0;
+
 /**
  * Calculates (base^exponent) % modulus efficiently.
  */
@@ -25,6 +29,29 @@ function power(base: bigint, exponent: bigint, modulus: bigint): bigint {
 }
 
 /**
+ * Generates a random BigInt within a given range [min, max].
+ * This is a simplified, non-cryptographically secure implementation suitable for Miller-Rabin.
+ */
+function getRandomBigInt(min: bigint, max: bigint): bigint {
+  if (min >= max) {
+    return min;
+  }
+  const range = max - min + ONE;
+  const bitLength = range.toString(2).length;
+
+  let randomBigInt;
+  do {
+    let randomBits = '0b';
+    for (let i = 0; i < bitLength; i++) {
+      randomBits += Math.random() < 0.5 ? '0' : '1';
+    }
+    randomBigInt = BigInt(randomBits);
+  } while (randomBigInt >= range);
+
+  return randomBigInt + min;
+}
+
+/**
  * Miller-Rabin primality test.
  * A return value of false means n is certainly not prime.
  * A return value of true means n is very likely a prime.
@@ -32,34 +59,41 @@ function power(base: bigint, exponent: bigint, modulus: bigint): bigint {
  * @param k The number of trials (iterations). Higher k means more accuracy.
  */
 export function isPrime(n: bigint, k: number = 8): boolean {
-  if (n <= ONE) return false;
-  if (n <= THREE) return true;
-  if (n % TWO === ZERO || n % THREE === ZERO) return false;
-  if (n === FIVE || n === SEVEN) return true;
-  if (n === FOUR || n === SIX || n === EIGHT || n === NINE) return false;
-
-
-  let s = ZERO;
-  let d = n - ONE;
-  while (d % TWO === ZERO) {
-    d /= TWO;
-    s++;
+  if (primeCache.has(n)) {
+    return primeCache.get(n)!;
   }
 
-  for (let i = 0; i < k; i++) {
-    // Pick a random number 'a' in [2, n-2]
-    // Secure random number generation is not strictly necessary for Miller-Rabin's probabilistic nature,
-    // but good practice if available. For simplicity, Math.random is used.
-    // Need to generate a BigInt random number.
-    const a = BigInt(Math.floor(Math.random() * (Number(n - TWO) - 2 + 1))) + TWO;
+  primalityTestTries++;
+  // console.log(`Primality test tries: ${primalityTestTries}`);
 
+  let result: boolean;
 
-    if (trialComposite(a, d, n, s)) {
-      return false;
+  if (n <= ONE) result = false;
+  else if (n <= THREE) result = true;
+  else if (n % TWO === ZERO || n % THREE === ZERO) result = false;
+  else if (n === FIVE || n === SEVEN) result = true;
+  else if (n === FOUR || n === SIX || n === EIGHT || n === NINE) result = false;
+  else {
+    let s = ZERO;
+    let d = n - ONE;
+    while (d % TWO === ZERO) {
+      d /= TWO;
+      s++;
     }
+
+    let isComposite = false;
+    for (let i = 0; i < k; i++) {
+      const a = getRandomBigInt(TWO, n - TWO);
+      if (trialComposite(a, d, n, s)) {
+        isComposite = true;
+        break;
+      }
+    }
+    result = !isComposite;
   }
 
-  return true;
+  primeCache.set(n, result);
+  return result;
 }
 
 /**
@@ -79,9 +113,57 @@ function trialComposite(a: bigint, d: bigint, n: bigint, s: bigint): boolean {
       return false; // n is probably prime
     }
   }
+
   return true; // n is composite
 }
 
+/**
+ * Finds a prime number by perturbing the initial number string.
+ * @param initialNumberStr The starting number as a string.
+ * @param onProgress Callback to report progress.
+ * @returns A prime number string.
+ */
+export async function findPrimeByPerturbation(
+  initialNumberStr: string,
+  onProgress: (progress: { attempts: number; currentCandidate: string }) => void
+): Promise<string> {
+  let attempts = 0;
+
+  // First, check if the original number is prime.
+  const originalCandidate = BigInt(initialNumberStr);
+  if (isPrime(originalCandidate)) {
+    console.log(`Original number is prime!`);
+    return initialNumberStr;
+  }
+
+  while (true) {
+    attempts++;
+
+    // Perturb 1-2 digits from the original string
+    const numDigitsToChange = 1 + Math.floor(Math.random() * 2);
+    let newNumStrArr = initialNumberStr.split('');
+    for (let i = 0; i < numDigitsToChange; i++) {
+      const randomIndex = Math.floor(Math.random() * newNumStrArr.length);
+      // Ensure the first digit is not '0'
+      const newDigit = (randomIndex === 0)
+        ? (Math.floor(Math.random() * 9) + 1).toString()
+        : Math.floor(Math.random() * 10).toString();
+      newNumStrArr[randomIndex] = newDigit;
+    }
+    const numStr = newNumStrArr.join('');
+    const candidate = BigInt(numStr);
+
+    if (isPrime(candidate)) {
+      console.log(`Found prime after ${attempts} attempts.`);
+      return numStr;
+    }
+
+    if (attempts % 100 === 0) {
+      onProgress({ attempts, currentCandidate: numStr });
+      await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
+    }
+  }
+}
 
 /**
  * Mutates a number string by randomly changing some of its digits.
@@ -177,7 +259,7 @@ export async function findPrime(
 
     // Add a small delay to allow other operations if this is running on the main thread
     // (though it's intended for a worker)
-    // await new Promise(resolve => setTimeout(resolve, 0)); // For very tight loops
+    await new Promise(resolve => setTimeout(resolve, 0)); // For very tight loops
   }
   return candidateStr;
 }

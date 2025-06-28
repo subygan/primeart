@@ -9,30 +9,29 @@ interface PrimeDisplayProps {
   primeAsciiArt?: string[];
   isProcessing: boolean;
   error: string;
+  currentCandidateAscii?: string[];
 }
 
-const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error }: PrimeDisplayProps) => {
-  const [isCopied, setIsCopied] = useState(false);
+const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error, currentCandidateAscii }: PrimeDisplayProps) => {
 
-  const handleCopy = async () => {
-    if (!primeNumber) return;
+  // 1. Live Processing State
+  if (isProcessing && currentCandidateAscii) {
+    return (
+      <div className="live-view-container">
+        <pre className="ascii-art-output">{currentCandidateAscii.join('\n')}</pre>
+        <div className="status-overlay">
+          <p>Checking for primality...</p>
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      await navigator.clipboard.writeText(primeNumber);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-      // Optionally show an error message to the user
-    }
-  };
-
-  // 1. Loading State
+  // 2. Initial Loading State (before first candidate)
   if (isProcessing && !primeNumber && !error) {
     return <div className="skeleton-loader" style={{ minHeight: '300px' }} />;
   }
 
-  // 2. Error State
+  // 3. Error State
   if (error) {
     return (
       <div className="display-message error">
@@ -42,7 +41,7 @@ const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error }: Prime
     );
   }
 
-  // 3. Idle / Initial State
+  // 4. Idle / Initial State
   if (!primeAsciiArt || !primeNumber) {
     return (
       <div className="display-message">
@@ -51,22 +50,10 @@ const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error }: Prime
     );
   }
 
-  // 4. Success State
+  // 5. Success State
   return (
     <div className="prime-display-container">
       <pre className="ascii-art-output">{primeAsciiArt.join('\n')}</pre>
-      
-      <div className="prime-number-section">
-        <div className="prime-number-header">
-          <h5>The Resulting Prime Number</h5>
-          <button onClick={handleCopy} className="copy-button" disabled={isCopied}>
-            {isCopied ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-        <div className="prime-number-value">
-          <code>{primeNumber}</code>
-        </div>
-      </div>
     </div>
   );
 };

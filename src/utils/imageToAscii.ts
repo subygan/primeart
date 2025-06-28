@@ -31,11 +31,13 @@ export async function convertImageToAscii(
   scale: number,
 ): Promise<string[]> {
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
+  const context = canvas.getContext('2d', { willReadFrequently: true });
 
   if (!context) {
     throw new Error('Could not get 2D rendering context for canvas.');
   }
+
+  const gscale1 = '0123456789'; // 10 levels of gray
 
   const W = image.width;
   const H = image.height;
@@ -87,8 +89,8 @@ export async function convertImageToAscii(
       const avg = Math.floor(getAverageL(tileImageData));
 
       // Look up ASCII char
-      // The gscale2 string has 10 characters, so we map avg (0-255) to an index (0-9)
-      const gsval = gscale2[Math.min(Math.floor((avg * 10) / 256), gscale2.length - 1)];
+      // The gscale1 string has 10 characters, so we map avg (0-255) to an index (0-9)
+            const gsval = gscale1[Math.min(Math.floor((avg * gscale1.length) / 256), gscale1.length - 1)];
       aimg[j] += gsval;
     }
   }

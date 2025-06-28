@@ -59,6 +59,7 @@ body {
   flex-grow: 1;
   overflow-y: auto; /* Allows content to scroll if panel is short */
   margin: 2rem 0;
+  min-height: 0; /* Helps flexbox calculate overflow correctly */
 }
 
 .control-section, .status-section {
@@ -139,11 +140,10 @@ h3 {
     color: var(--text-main);
 }
 
-.results-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.results-stack {
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
-  align-items: start;
 }
 
 .result-card {

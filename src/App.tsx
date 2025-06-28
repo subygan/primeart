@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
 import './App.css'; // We will replace the content of this file
 import ImageUpload from './components/ImageUpload';
-import AsciiDisplay from './components/AsciiDisplay';
+
 import PrimeDisplay from './components/PrimeDisplay';
 import { convertImageToAscii } from './utils/imageToAscii';
-import { findPrime } from './utils/primality';
+import { findPrimeByPerturbation } from './utils/primality';
 
 function App() {
-  const [asciiArt, setAsciiArt] = useState<string[]>([]);
+
   const [primeNumber, setPrimeNumber] = useState<string | null>(null);
   const [primeSearchStatus, setPrimeSearchStatus] = useState<string>('Idle');
   const [searchProgress, setSearchProgress] = useState<{ attempts: number; currentCandidate: string } | undefined>(undefined);
   const [primeAsciiArt, setPrimeAsciiArt] = useState<string[] | undefined>(undefined);
+  const [currentCandidateAscii, setCurrentCandidateAscii] = useState<string[] | undefined>(undefined);
   const [error, setError] = useState<string>('');
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+    const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [asciiWidth, setAsciiWidth] = useState<number>(80);
 
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
-    setAsciiArt([]);
     setPrimeNumber(null);
     setPrimeAsciiArt(undefined);
     setPrimeSearchStatus('Idle');
@@ -28,27 +29,37 @@ function App() {
     // Reset state for a new run
     setIsProcessing(true);
     setError('');
-    setAsciiArt([]);
     setPrimeNumber(null);
     setPrimeAsciiArt(undefined);
+    setCurrentCandidateAscii(undefined);
     setPrimeSearchStatus('1. Converting image...');
     setSearchProgress(undefined);
 
     try {
-      const cols = 80;
+      const cols = asciiWidth;
       const scale = 0.43;
       const generatedAscii = await convertImageToAscii(image, cols, scale);
 
       if (generatedAscii.length === 0 || generatedAscii.join('').trim().length === 0) {
         throw new Error("Could not generate ASCII art. The image might be empty, transparent, or too small.");
       }
-      setAsciiArt(generatedAscii);
+
 
       setPrimeSearchStatus('2. Searching for prime...');
       const initialNumberStr = generatedAscii.join('');
 
-      const foundPrime = await findPrime(initialNumberStr, (progress) => {
+            const foundPrime = await findPrimeByPerturbation(initialNumberStr, (progress) => {
         setSearchProgress(progress);
+
+        // Convert the candidate string back to ASCII art for live display
+        const candidateRows: string[] = [];
+        let currentIndex = 0;
+        for (const row of generatedAscii) { // `generatedAscii` is from the outer scope
+            const rowLength = row.length;
+            candidateRows.push(progress.currentCandidate.substring(currentIndex, currentIndex + rowLength));
+            currentIndex += rowLength;
+        }
+        setCurrentCandidateAscii(candidateRows);
       });
 
       setPrimeNumber(foundPrime);
@@ -87,6 +98,22 @@ function App() {
             <ImageUpload onImageUpload={handleImageUpload} onError={handleError} />
           </section>
 
+          <section className="control-section">
+            <label htmlFor="width-slider" style={{ display: 'block', marginBottom: '5px' }}>
+              ASCII Art Width: <strong>{asciiWidth}</strong>
+            </label>
+            <input
+              type="range"
+              id="width-slider"
+              min="40"
+              max="200"
+              step="1"
+              value={asciiWidth}
+              onChange={(e) => setAsciiWidth(Number(e.target.value))}
+              style={{ width: '100%' }}
+            />
+          </section>
+
           <section className="status-section">
             <h3>2. Processing Status</h3>
             <div className="status-box">
@@ -110,34 +137,26 @@ function App() {
 
       {/* --- Right Display Panel --- */}
       <main className="display-panel">
-        {!isProcessing && !asciiArt.length && !error && (
+        {!isProcessing && !primeNumber && !error && (
           <div className="placeholder-container">
-            {/* You could use an SVG icon here */}
             <h2>Your Art Will Appear Here</h2>
-            <p>Upload an image in the control panel to start the process.</p>
+            <p>Upload an image to see the prime number version.</p>
           </div>
         )}
-        
-        {(isProcessing || asciiArt.length > 0) && (
-            <div className="results-grid">
-                <div className="result-card">
-                    <h4>Original ASCII Art</h4>
-                     {isProcessing && !asciiArt.length ? (
-                        <div className="skeleton-loader" />
-                    ) : (
-                        <AsciiDisplay asciiArt={asciiArt} />
-                    )}
-                </div>
-                <div className="result-card">
-                    <h4>Prime Number as ASCII Art</h4>
-                    <PrimeDisplay
-                        primeNumber={primeNumber}
-                        primeAsciiArt={primeAsciiArt}
-                        isProcessing={isProcessing} // Pass processing state for skeleton
-                        error={error}
-                     />
-                </div>
+
+        {(isProcessing || primeNumber) && (
+          <div className="results-stack">
+            <div className="result-card">
+              <h4>Prime Number as ASCII Art</h4>
+              <PrimeDisplay
+                primeNumber={primeNumber}
+                primeAsciiArt={primeAsciiArt}
+                isProcessing={isProcessing}
+                error={error}
+                currentCandidateAscii={currentCandidateAscii}
+              />
             </div>
+          </div>
         )}
       </main>
     </div>

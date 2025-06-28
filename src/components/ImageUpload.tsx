@@ -61,7 +61,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImageUpload, onError }) => 
 
   return (
     <div className="component-container">
-      <h3>Upload Image</h3>
       <label htmlFor="imageUploadInputCustom" className="button-primary" style={{display: 'inline-block', marginBottom: '10px', cursor: 'pointer'}}>
         Choose File
       </label>
