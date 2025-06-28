@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css'; // We will replace the content of this file
 import ImageUpload from './components/ImageUpload';
 
@@ -12,10 +12,54 @@ function App() {
   const [primeSearchStatus, setPrimeSearchStatus] = useState<string>('Idle');
   const [searchProgress, setSearchProgress] = useState<{ attempts: number; currentCandidate: string; charIndex?: number } | undefined>(undefined);
   const [primeAsciiArt, setPrimeAsciiArt] = useState<string[] | undefined>(undefined);
-  const [currentCandidateAscii, setCurrentCandidateAscii] = useState<string[] | undefined>(undefined);
+  const [candidateAscii, setCandidateAscii] = useState<string[] | null>(null);
+  const [estimatedTries, setEstimatedTries] = useState<number | null>(null);
+  const [estimatedTime, setEstimatedTime] = useState<string | null>(null);
+  const [searchStartTime, setSearchStartTime] = useState<number | null>(null);
   const [error, setError] = useState<string>('');
-    const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [asciiWidth, setAsciiWidth] = useState<number>(80);
+  const [customDigits, setCustomDigits] = useState<string>('0123456789');
+
+  function formatDuration(ms: number): string {
+    if (ms < 0) ms = 0;
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+        return `~${hours}h ${minutes}m`;
+    }
+    if (minutes > 0) {
+        return `~${minutes}m ${seconds}s`;
+    }
+    if (totalSeconds > 10) {
+        return `~${totalSeconds}s`;
+    }
+    if (totalSeconds > 0) {
+        return `< 10s`;
+    }
+    return `a few moments`;
+  }
+
+  useEffect(() => {
+    if (isProcessing && searchProgress && searchStartTime && estimatedTries) {
+        const elapsedTimeMs = Date.now() - searchStartTime;
+        const attempts = searchProgress.attempts;
+        if (attempts > 0) {
+            const timePerAttempt = elapsedTimeMs / attempts;
+            const remainingAttempts = estimatedTries - attempts;
+            if (remainingAttempts > 0) {
+                const remainingTimeMs = remainingAttempts * timePerAttempt;
+                setEstimatedTime(formatDuration(remainingTimeMs));
+            } else {
+                setEstimatedTime("Finishing up...");
+            }
+        }
+    }
+  }, [searchProgress, isProcessing, searchStartTime, estimatedTries]);
+
 
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
@@ -31,14 +75,16 @@ function App() {
     setError('');
     setPrimeNumber(null);
     setPrimeAsciiArt(undefined);
-    setCurrentCandidateAscii(undefined);
+    setCandidateAscii(null);
+    setEstimatedTries(null);
+    setEstimatedTime(null);
     setPrimeSearchStatus('1. Converting image...');
     setSearchProgress(undefined);
 
     try {
       const cols = asciiWidth;
       const scale = 0.43;
-      const generatedAscii = await convertImageToAscii(image, cols, scale);
+      const generatedAscii = await convertImageToAscii(image, cols, scale, customDigits);
 
       if (generatedAscii.length === 0 || generatedAscii.join('').trim().length === 0) {
         throw new Error("Could not generate ASCII art. The image might be empty, transparent, or too small.");
@@ -48,7 +94,12 @@ function App() {
       setPrimeSearchStatus('2. Searching for prime...');
       const initialNumberStr = generatedAscii.join('');
 
-            const foundPrime = await findPrimeByPerturbation(initialNumberStr, (progress) => {
+      const d = initialNumberStr.length;
+      const estimated = Math.max(1, Math.round(1.15 * (d - 1)));
+      setEstimatedTries(estimated);
+      setSearchStartTime(Date.now());
+
+            const foundPrime = await findPrimeByPerturbation(initialNumberStr, customDigits, (progress) => {
         setSearchProgress(progress);
 
         // Convert the candidate string back to ASCII art for live display
@@ -59,7 +110,7 @@ function App() {
             candidateRows.push(progress.currentCandidate.substring(currentIndex, currentIndex + rowLength));
             currentIndex += rowLength;
         }
-        setCurrentCandidateAscii(candidateRows);
+        setCandidateAscii(candidateRows);
       });
 
       setPrimeNumber(foundPrime);
@@ -114,6 +165,27 @@ function App() {
             />
           </section>
 
+          <section className="control-section">
+            <label htmlFor="custom-digits-input" style={{ display: 'block', marginBottom: '5px' }}>
+              Allowed Digits:
+            </label>
+            <input
+              type="text"
+              id="custom-digits-input"
+              value={customDigits}
+              onChange={(e) => {
+                // Allow only unique digits
+                const uniqueDigits = Array.from(new Set(e.target.value.replace(/[^0-9]/g, ''))).join('');
+                setCustomDigits(uniqueDigits);
+              }}
+              placeholder="e.g., 0123456789"
+              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', fontFamily: 'var(--font-mono)' }}
+            />
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '5px' }}>
+              The set of digits used to construct the prime number.
+            </p>
+          </section>
+
           <section className="status-section">
             <h3>2. Processing Status</h3>
             <div className="status-box">
@@ -122,10 +194,20 @@ function App() {
               {isProcessing && <div className="spinner" />}
               {isProcessing && searchProgress && primeSearchStatus === '2. Searching for prime...' && (
                 <div className="progress-details">
-                  <p>Attempts: {searchProgress.attempts.toLocaleString()}</p>
-                  <p>Candidate: <span>{searchProgress.currentCandidate.substring(0, 30)}...</span></p>
+                  {estimatedTries ? (
+                    <p>
+                      Tries: {searchProgress.attempts.toLocaleString()} / {estimatedTries.toLocaleString()}
+                    </p>
+                  ) : (
+                    <p>Attempts: {searchProgress.attempts.toLocaleString()}</p>
+                  )}
+
+                  {estimatedTime && <p>Est. Time Left: {estimatedTime}</p>}
+
                   {searchProgress.charIndex !== undefined && (
-                    <p>Testing char at index: {searchProgress.charIndex}</p>
+                    <p>
+                      Testing digit at index: {searchProgress.charIndex}
+                    </p>
                   )}
                 </div>
               )}
@@ -156,7 +238,7 @@ function App() {
                 primeAsciiArt={primeAsciiArt}
                 isProcessing={isProcessing}
                 error={error}
-                currentCandidateAscii={currentCandidateAscii}
+                candidateAscii={candidateAscii}
               />
             </div>
           </div>

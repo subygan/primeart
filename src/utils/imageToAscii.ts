@@ -29,6 +29,7 @@ export async function convertImageToAscii(
   image: HTMLImageElement,
   cols: number,
   scale: number,
+  customDigits: string = '0123456789'
 ): Promise<string[]> {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -37,7 +38,7 @@ export async function convertImageToAscii(
     throw new Error('Could not get 2D rendering context for canvas.');
   }
 
-  const gscale1 = '0123456789'; // 10 levels of gray
+
 
   const W = image.width;
   const H = image.height;
@@ -90,7 +91,7 @@ export async function convertImageToAscii(
 
       // Look up ASCII char
       // The gscale1 string has 10 characters, so we map avg (0-255) to an index (0-9)
-            const gsval = gscale1[Math.min(Math.floor((avg * gscale1.length) / 256), gscale1.length - 1)];
+            const gsval = customDigits[Math.min(Math.floor((avg * customDigits.length) / 256), customDigits.length - 1)];
       aimg[j] += gsval;
     }
   }

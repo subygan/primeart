@@ -125,6 +125,7 @@ function trialComposite(a: bigint, d: bigint, n: bigint, s: bigint): boolean {
  */
 export async function findPrimeByPerturbation(
   initialNumberStr: string,
+  customDigits: string,
   onProgress: (progress: { attempts: number; currentCandidate: string; charIndex?: number }) => void
 ): Promise<string> {
   let attempts = 0;
@@ -147,10 +148,18 @@ export async function findPrimeByPerturbation(
     for (let i = 0; i < numDigitsToChange; i++) {
       const randomIndex = Math.floor(Math.random() * newNumStrArr.length);
       lastChangedIndex = randomIndex;
-      // Ensure the first digit is not '0'
-      const newDigit = (randomIndex === 0)
-        ? (Math.floor(Math.random() * 9) + 1).toString()
-        : Math.floor(Math.random() * 10).toString();
+
+      let newDigit: string;
+      if (randomIndex === 0 && newNumStrArr.length > 1) {
+        const nonZeroDigits = customDigits.replace('0', '');
+        if (nonZeroDigits.length > 0) {
+          newDigit = nonZeroDigits[Math.floor(Math.random() * nonZeroDigits.length)];
+        } else {
+          newDigit = '0'; // Only '0' was provided
+        }
+      } else {
+        newDigit = customDigits[Math.floor(Math.random() * customDigits.length)];
+      }
       newNumStrArr[randomIndex] = newDigit;
     }
     const numStr = newNumStrArr.join('');

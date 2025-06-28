@@ -9,16 +9,16 @@ interface PrimeDisplayProps {
   primeAsciiArt?: string[];
   isProcessing: boolean;
   error: string;
-  currentCandidateAscii?: string[];
+  candidateAscii?: string[] | null;
 }
 
-const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error, currentCandidateAscii }: PrimeDisplayProps) => {
+const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error, candidateAscii }: PrimeDisplayProps) => {
 
   // 1. Live Processing State
-  if (isProcessing && currentCandidateAscii) {
+  if (isProcessing && candidateAscii) {
     return (
       <div className="live-view-container">
-        <pre className="ascii-art-output">{currentCandidateAscii.join('\n')}</pre>
+        <pre className="ascii-art-output">{candidateAscii.join('\n')}</pre>
         <div className="status-overlay">
           <p>Checking for primality...</p>
         </div>
