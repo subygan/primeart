@@ -163,7 +163,7 @@ function App() {
     }
   };
 
-  const startPrimeSearch = async () => {
+  const startPrimeSearch = () => {
     if (!initialNumberStr) {
       handleError('Cannot start search without an initial number.');
       return;
@@ -178,8 +178,10 @@ function App() {
     setCandidateAscii(null);
     setSearchStartTime(Date.now());
 
-    try {
-      const foundPrime = await findPrimeByPerturbation(
+    // Defer the heavy computation to the next event loop tick to allow the UI to update first.
+    setTimeout(async () => {
+      try {
+        const foundPrime = await findPrimeByPerturbation(
         initialNumberStr,
         customDigits,
         (progress) => {
@@ -202,10 +204,11 @@ function App() {
       if (e.name === 'AbortError') {
         // Cancellation is handled by handleCancel, so we can just log it.
         console.log('Prime search was cancelled.');
-      } else {
-        handleError(e.message || 'An unexpected error occurred during the prime search.');
+        } else {
+          handleError(e.message || 'An unexpected error occurred during the prime search.');
+        }
       }
-    }
+    }, 0);
   };
 
   return (
