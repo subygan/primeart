@@ -20,6 +20,23 @@ function App() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [asciiWidth, setAsciiWidth] = useState<number>(80);
   const [customDigits, setCustomDigits] = useState<string>('0123456789');
+  const [initialAsciiArt, setInitialAsciiArt] = useState<string[] | null>(null);
+  const [initialNumberStr, setInitialNumberStr] = useState<string | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  const numberToAsciiArt = (numberStr: string, width: number): string[] => {
+    const rows: string[] = [];
+    let currentIndex = 0;
+    while (currentIndex < numberStr.length) {
+      rows.push(numberStr.substring(currentIndex, currentIndex + width));
+      currentIndex += width;
+    }
+    return rows;
+  };
+
+  const setPrimeAsciiArtFromNumber = (primeStr: string, width: number) => {
+    setPrimeAsciiArt(numberToAsciiArt(primeStr, width));
+  };
 
   function formatDuration(ms: number): string {
     if (ms < 0) ms = 0;
@@ -69,17 +86,55 @@ function App() {
     setIsProcessing(false);
   };
 
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsProcessing(false);
+      setPrimeSearchStatus('Search cancelled.');
+    }
+  };
+
   const handleImageUpload = async (image: HTMLImageElement) => {
     // Reset state for a new run
     setIsProcessing(true);
     setError('');
     setPrimeNumber(null);
     setPrimeAsciiArt(undefined);
+    setInitialAsciiArt(null);
+    setInitialNumberStr(null);
     setCandidateAscii(null);
     setEstimatedTries(null);
     setEstimatedTime(null);
-    setPrimeSearchStatus('1. Converting image...');
+    setPrimeSearchStatus(''); // Clear previous status
     setSearchProgress(undefined);
+
+    // Use a timeout to ensure the UI updates before blocking the main thread
+    setTimeout(async () => {
+      try {
+        setPrimeSearchStatus('1. Converting image...');
+        const cols = asciiWidth;
+        const scale = 0.43;
+        const generatedAscii = await convertImageToAscii(image, cols, scale, customDigits);
+
+        if (generatedAscii.length === 0 || generatedAscii.join('').trim().length === 0) {
+          throw new Error("Could not generate ASCII art. The image might be empty, transparent, or too small.");
+        }
+
+        const numberStr = generatedAscii.join('');
+        setInitialAsciiArt(generatedAscii);
+        setInitialNumberStr(numberStr);
+        setPrimeSearchStatus('Ready to find prime. Click \"Make it Prime\" to start.');
+
+        const d = numberStr.length;
+        const tries = Math.round(1.15 * (d - 1));
+        setEstimatedTries(tries);
+
+        setIsProcessing(false);
+      } catch (e: any) {
+        handleError(e.message || 'An unexpected error occurred during image processing.');
+      }
+    }, 50); // A small delay to allow the UI to update
 
     try {
       const cols = asciiWidth;
@@ -90,47 +145,66 @@ function App() {
         throw new Error("Could not generate ASCII art. The image might be empty, transparent, or too small.");
       }
 
+      const numberStr = generatedAscii.join('');
+      setInitialAsciiArt(generatedAscii);
+      setInitialNumberStr(numberStr);
+      setPrimeSearchStatus('Ready to find prime. Click "Make it Prime" to start.');
 
-      setPrimeSearchStatus('2. Searching for prime...');
-      const initialNumberStr = generatedAscii.join('');
+      // Calculate estimated tries
+      const d = numberStr.length;
+      const tries = Math.round(1.15 * (d - 1));
+      setEstimatedTries(tries);
 
-      const d = initialNumberStr.length;
-      const estimated = Math.max(1, Math.round(1.15 * (d - 1)));
-      setEstimatedTries(estimated);
-      setSearchStartTime(Date.now());
-
-            const foundPrime = await findPrimeByPerturbation(initialNumberStr, customDigits, (progress) => {
-        setSearchProgress(progress);
-
-        // Convert the candidate string back to ASCII art for live display
-        const candidateRows: string[] = [];
-        let currentIndex = 0;
-        for (const row of generatedAscii) { // `generatedAscii` is from the outer scope
-            const rowLength = row.length;
-            candidateRows.push(progress.currentCandidate.substring(currentIndex, currentIndex + rowLength));
-            currentIndex += rowLength;
-        }
-        setCandidateAscii(candidateRows);
-      });
-
-      setPrimeNumber(foundPrime);
-      setPrimeSearchStatus('3. Found!');
-
-      const primeRows: string[] = [];
-      let currentIndex = 0;
-      for (const row of generatedAscii) {
-        const rowLength = row.length;
-        primeRows.push(foundPrime.substring(currentIndex, currentIndex + rowLength));
-        currentIndex += rowLength;
-      }
-      setPrimeAsciiArt(primeRows);
+      // Set isProcessing to false AFTER other states are set to prevent race conditions.
+      setIsProcessing(false);
 
     } catch (e: any) {
-      const errorMessage = e.message || 'An unexpected error occurred.';
-      handleError(errorMessage); // Use handleError to consolidate state reset
-      setPrimeSearchStatus('Error'); // Set status after resetting
-    } finally {
+      handleError(e.message || 'An unexpected error occurred during image processing.');
+    }
+  };
+
+  const startPrimeSearch = async () => {
+    if (!initialNumberStr) {
+      handleError('Cannot start search without an initial number.');
+      return;
+    }
+
+    const controller = new AbortController();
+    setAbortController(controller);
+
+    setIsProcessing(true);
+    setPrimeSearchStatus('2. Searching for prime...');
+    setSearchProgress(undefined);
+    setCandidateAscii(null);
+    setSearchStartTime(Date.now());
+
+    try {
+      const foundPrime = await findPrimeByPerturbation(
+        initialNumberStr,
+        customDigits,
+        (progress) => {
+          setSearchProgress(progress);
+          if (progress.charIndex !== undefined) {
+            const art = numberToAsciiArt(progress.currentCandidate, asciiWidth);
+            setCandidateAscii(art);
+          }
+        },
+        controller.signal
+      );
+
+      setPrimeNumber(foundPrime);
+      setPrimeAsciiArtFromNumber(foundPrime, asciiWidth);
+      setPrimeSearchStatus('Success! Found a prime.');
+      setCandidateAscii(null);
       setIsProcessing(false);
+
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        // Cancellation is handled by handleCancel, so we can just log it.
+        console.log('Prime search was cancelled.');
+      } else {
+        handleError(e.message || 'An unexpected error occurred during the prime search.');
+      }
     }
   };
 
@@ -174,15 +248,15 @@ function App() {
               id="custom-digits-input"
               value={customDigits}
               onChange={(e) => {
-                // Allow only unique digits
-                const uniqueDigits = Array.from(new Set(e.target.value.replace(/[^0-9]/g, ''))).join('');
-                setCustomDigits(uniqueDigits);
+                // Allow up to 10 numeric characters, with repeats.
+                const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                setCustomDigits(digits);
               }}
               placeholder="e.g., 0123456789"
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box', fontFamily: 'var(--font-mono)' }}
             />
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '5px' }}>
-              The set of digits used to construct the prime number.
+              The set of digits (up to 10) used to construct the prime number.
             </p>
           </section>
 
@@ -222,25 +296,36 @@ function App() {
 
       {/* --- Right Display Panel --- */}
       <main className="display-panel">
-        {!isProcessing && !primeNumber && !error && (
+        {/* Show placeholder only when truly idle */}
+        {!initialAsciiArt && !primeNumber && !isProcessing && !error && (
           <div className="placeholder-container">
             <h2>Your Art Will Appear Here</h2>
             <p>Upload an image to see the prime number version.</p>
           </div>
         )}
 
-        {(isProcessing || primeNumber) && (
+        {/* Show the display component if there's anything to show */}
+        {(initialAsciiArt || primeNumber || isProcessing || error) && (
           <div className="results-stack">
-            <div className="result-card">
-              <h4>Prime Number as ASCII Art</h4>
-              <PrimeDisplay
-                primeNumber={primeNumber}
-                primeAsciiArt={primeAsciiArt}
-                isProcessing={isProcessing}
-                error={error}
-                candidateAscii={candidateAscii}
-              />
-            </div>
+            <PrimeDisplay
+              primeNumber={primeNumber}
+              primeAsciiArt={primeAsciiArt}
+              isProcessing={isProcessing}
+              error={error}
+              candidateAscii={candidateAscii}
+              initialAsciiArt={initialAsciiArt}
+              onStartSearch={startPrimeSearch}
+              onCancel={handleCancel}
+              onCopy={() => {
+                if (primeNumber) {
+                  navigator.clipboard.writeText(primeNumber);
+                  // Optionally, provide feedback to the user
+                  const originalStatus = primeSearchStatus;
+                  setPrimeSearchStatus('Copied to clipboard!');
+                  setTimeout(() => setPrimeSearchStatus(originalStatus), 2000);
+                }
+              }}
+            />
           </div>
         )}
       </main>

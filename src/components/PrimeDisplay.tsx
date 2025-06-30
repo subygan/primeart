@@ -1,61 +1,94 @@
-import React, { useState } from 'react';
+import React from 'react';
+import './PrimeDisplay.css';
 
-// Make sure you have a CSS file for component-specific styles
-// or add the new classes to your main App.css
-import './PrimeDisplay.css'; 
-
-interface PrimeDisplayProps {
+export interface PrimeDisplayProps {
   primeNumber: string | null;
-  primeAsciiArt?: string[];
+  primeAsciiArt: string[] | undefined;
   isProcessing: boolean;
   error: string;
-  candidateAscii?: string[] | null;
+  candidateAscii: string[] | null;
+  initialAsciiArt: string[] | null;
+  onStartSearch: () => void;
+  onCancel: () => void;
+  onCopy: () => void;
 }
 
-const PrimeDisplay = ({ primeNumber, primeAsciiArt, isProcessing, error, candidateAscii }: PrimeDisplayProps) => {
-
-  // 1. Live Processing State
-  if (isProcessing && candidateAscii) {
+const PrimeDisplay = ({
+  primeNumber,
+  primeAsciiArt,
+  isProcessing,
+  error,
+  candidateAscii,
+  initialAsciiArt,
+  onStartSearch,
+  onCancel,
+  onCopy,
+}: PrimeDisplayProps) => {
+  // 1. Error State
+  if (error) {
     return (
-      <div className="live-view-container">
-        <pre className="ascii-art-output">{candidateAscii.join('\n')}</pre>
-        <div className="status-overlay">
-          <p>Checking for primality...</p>
+      <div className="display-message error">
+        <p><strong>An Error Occurred</strong></p>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  // 2. Success State: Prime has been found
+  if (primeNumber && primeAsciiArt) {
+    return (
+      <div className="prime-display-container">
+        <pre className="ascii-art-output">{primeAsciiArt.join('\n')}</pre>
+        <div className="action-bar">
+          <button onClick={onCopy} className="copy-button">
+            Copy Prime Number
+          </button>
         </div>
       </div>
     );
   }
 
-  // 2. Initial Loading State (before first candidate)
-  if (isProcessing && !primeNumber && !error) {
-    return <div className="skeleton-loader" style={{ minHeight: '300px' }} />;
-  }
+  // 3. Intermediate State: Initial art is generated, waiting to start or in progress of prime search
+  if (initialAsciiArt) {
+    const displayArt = isProcessing && candidateAscii ? candidateAscii : initialAsciiArt;
 
-  // 3. Error State
-  if (error) {
     return (
-      <div className="display-message error">
-        <p><strong>Generation Failed</strong></p>
-        <p>The process could not be completed. Please try a different image.</p>
+      <div className="prime-display-container">
+        <pre className="ascii-art-output">{displayArt.join('\n')}</pre>
+
+        {isProcessing && (
+          <div className="status-overlay">
+            <div className="spinner" />
+            <p>Searching for a prime...</p>
+          </div>
+        )}
+
+        <div className="action-bar">
+          {isProcessing ? (
+            <button onClick={onCancel} className="cancel-button">
+              Cancel Search
+            </button>
+          ) : (
+            <button onClick={onStartSearch} className="start-button">
+              Make it Prime
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
-  // 4. Idle / Initial State
-  if (!primeAsciiArt || !primeNumber) {
+  // 4. Initial Loading State (when converting image)
+  if (isProcessing) {
     return (
       <div className="display-message">
-        <p>The prime number art will be displayed here once an image is processed.</p>
+        <div className="spinner" />
+        <p>Processing Image...</p>
       </div>
     );
   }
 
-  // 5. Success State
-  return (
-    <div className="prime-display-container">
-      <pre className="ascii-art-output">{primeAsciiArt.join('\n')}</pre>
-    </div>
-  );
+  return null;
 };
 
 export default PrimeDisplay;

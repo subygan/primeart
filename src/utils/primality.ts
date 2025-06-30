@@ -126,7 +126,8 @@ function trialComposite(a: bigint, d: bigint, n: bigint, s: bigint): boolean {
 export async function findPrimeByPerturbation(
   initialNumberStr: string,
   customDigits: string,
-  onProgress: (progress: { attempts: number; currentCandidate: string; charIndex?: number }) => void
+  onProgress: (progress: { attempts: number; currentCandidate: string; charIndex?: number }) => void,
+  signal: AbortSignal
 ): Promise<string> {
   let attempts = 0;
 
@@ -139,6 +140,9 @@ export async function findPrimeByPerturbation(
   }
 
   while (true) {
+    if (signal.aborted) {
+      throw new DOMException('Search cancelled by user', 'AbortError');
+    }
     attempts++;
 
     // Perturb 1-2 digits from the original string
