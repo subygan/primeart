@@ -103,6 +103,36 @@ h3 {
     color: var(--text-secondary);
 }
 
+.realtime-counter {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.counter-value {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  display: block;
+  line-height: 1;
+}
+
+.counter-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tries-progress {
+  text-align: center;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+}
+
 .error-message {
   color: var(--text-error);
   background-color: rgba(248, 113, 113, 0.1);

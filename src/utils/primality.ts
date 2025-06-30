@@ -175,10 +175,11 @@ export async function findPrimeByPerturbation(
       return numStr;
     }
 
-    // Report progress more frequently for a "real-time" feel.
-    if (attempts % 20 === 0) { // Update every 20 attempts
-      onProgress({ attempts, currentCandidate: numStr, charIndex: lastChangedIndex });
-      await new Promise(resolve => setTimeout(resolve, 0)); // Yield to the event loop
+    // Report progress on every attempt and yield to the event loop every 20 attempts
+    // to keep the UI responsive without overwhelming it.
+    onProgress({ attempts, currentCandidate: numStr, charIndex: lastChangedIndex });
+    if (attempts % 20 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
 }

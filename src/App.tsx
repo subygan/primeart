@@ -271,21 +271,16 @@ function App() {
               {isProcessing && <div className="spinner" />}
               {isProcessing && searchProgress && primeSearchStatus === '2. Searching for prime...' && (
                 <div className="progress-details">
-                  {estimatedTries ? (
-                    <p>
-                      Tries: {searchProgress.attempts.toLocaleString()} / {estimatedTries.toLocaleString()}
+                  <div className="realtime-counter">
+                    <span className="counter-value">{searchProgress.attempts.toLocaleString()}</span>
+                    <span className="counter-label">Candidates Tested</span>
+                  </div>
+                  {estimatedTries && (
+                    <p className="tries-progress">
+                      (out of an estimated ~{estimatedTries.toLocaleString()})
                     </p>
-                  ) : (
-                    <p>Attempts: {searchProgress.attempts.toLocaleString()}</p>
                   )}
-
                   {estimatedTime && <p>Est. Time Left: {estimatedTime}</p>}
-
-                  {searchProgress.charIndex !== undefined && (
-                    <p>
-                      Testing digit at index: {searchProgress.charIndex}
-                    </p>
-                  )}
                 </div>
               )}
             </div>
