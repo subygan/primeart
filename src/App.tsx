@@ -77,6 +77,21 @@ function App() {
     }
   }, [searchProgress, isProcessing, searchStartTime, estimatedTries]);
 
+  // Effect to update initial ASCII art when width changes
+  useEffect(() => {
+    if (initialNumberStr) {
+      const art = numberToAsciiArt(initialNumberStr, asciiWidth);
+      setInitialAsciiArt(art);
+    }
+  }, [initialNumberStr, asciiWidth]);
+
+  // Effect to update the final prime's ASCII art when width changes
+  useEffect(() => {
+    if (primeNumber) {
+      setPrimeAsciiArtFromNumber(primeNumber, asciiWidth);
+    }
+  }, [primeNumber, asciiWidth]);
+
 
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
@@ -122,9 +137,8 @@ function App() {
         }
 
         const numberStr = generatedAscii.join('');
-        setInitialAsciiArt(generatedAscii);
         setInitialNumberStr(numberStr);
-        setPrimeSearchStatus('Ready to find prime. Click \"Make it Prime\" to start.');
+        setPrimeSearchStatus('Ready to find prime. Click "Make it Prime" to start.');
 
         const d = numberStr.length;
         const tries = Math.round(1.15 * (d - 1));
@@ -146,7 +160,6 @@ function App() {
       }
 
       const numberStr = generatedAscii.join('');
-      setInitialAsciiArt(generatedAscii);
       setInitialNumberStr(numberStr);
       setPrimeSearchStatus('Ready to find prime. Click "Make it Prime" to start.');
 
@@ -195,7 +208,6 @@ function App() {
       );
 
       setPrimeNumber(foundPrime);
-      setPrimeAsciiArtFromNumber(foundPrime, asciiWidth);
       setPrimeSearchStatus('Success! Found a prime.');
       setCandidateAscii(null);
       setIsProcessing(false);
